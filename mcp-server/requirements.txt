@@ -1,0 +1,4 @@
+mcp>=1.0.0,<2
+psycopg2-binary>=2.9
+matplotlib>=3.7
+pytest>=8.0

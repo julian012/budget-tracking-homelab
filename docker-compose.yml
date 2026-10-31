@@ -1,0 +1,48 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: budget-backend
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - FIREBASE_CREDENTIALS_PATH=/app/firebase-service-account.json
+      - FIREBASE_WEB_API_KEY=${FIREBASE_WEB_API_KEY}
+      - ALLOW_DEV_AUTH=${ALLOW_DEV_AUTH:-false}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://api.example.com}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_API_ENDPOINT=${AI_API_ENDPOINT:-https://opencode.ai/zen/go/v1}
+    volumes:
+      - ./backend/firebase-service-account.json:/app/firebase-service-account.json:ro
+    networks:
+      - apps-network
+    restart: unless-stopped
+
+  mcp:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: budget-mcp
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgres://budget:change-me@postgres_container:5432/budget}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-streamable-http}
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8000
+    ports:
+      - "8001:8000"
+    networks:
+      - apps-network
+    restart: unless-stopped
+
+networks:
+  apps-network:
+    external: true
+    name: apps-network

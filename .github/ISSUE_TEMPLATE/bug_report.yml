@@ -1,0 +1,85 @@
+name: 🐛 Bug report
+description: Report a bug or incorrect app behavior
+title: "bug: "
+labels: ["type:bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Fill in as many fields as possible.
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Actual app version (see `make version` or `mobile/pubspec.yaml`)
+      placeholder: "1.6.1"
+    validations:
+      required: true
+  - type: input
+    id: capa
+    attributes:
+      label: Affected layer
+      description: Which layer has the problem
+      placeholder: "mobile / backend / mcp-server / docs"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen?
+      placeholder: "E.g., Opening Reports shows the month's total KPI."
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happens instead of what is expected?
+      placeholder: "E.g., The app crashes or shows 0."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Detailed list of steps
+      placeholder: |
+        1. Go to '...'
+        2. Tap '...'
+        3. Observe '...'
+      render: bash
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical (blocks usage)
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste logs, stacktraces, or images. Optional field
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: ref
+    attributes:
+      label: Reference
+      description: "Branch, commit, or link if it adds context"
+  - type: checkboxes
+    id: terminar
+    attributes:
+      label: Checklist
+      options:
+        - label: I confirmed the bug is still present in the latest version
+        - label: I checked that there is no duplicate issue

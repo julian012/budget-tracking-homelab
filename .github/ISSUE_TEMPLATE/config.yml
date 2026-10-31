@@ -1,0 +1,7 @@
+# Blank issue configuration
+# When false, users must use one of the defined templates.
+blank_issues_enabled: false
+contact_links:
+  - name: Issues Guide
+    url: https://github.com/<your-user>/<your-repo>/blob/main/docs/ISSUES_GUIDE.md
+    about: Learn the repo workflow (how to create issues, branches, and PRs).

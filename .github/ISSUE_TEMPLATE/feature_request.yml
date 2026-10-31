@@ -1,0 +1,63 @@
+name: ✨ Feature request
+description: Suggest a new feature or improvement for the app
+title: "feat: "
+labels: ["type:feature"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      text: |
+        Describe the new feature. One idea per issue.
+  - type: input
+    id: capa
+    attributes:
+      label: Layer
+      description: Where does the feature have an impact?
+      placeholder: "mobile / backend / mcp-server / docs"
+    validations:
+      required: true
+  - type: textarea
+    id: usuario
+    attributes:
+      label: User story
+      description: As a [role], I want [action], so that [benefit].
+      placeholder: |
+        As a user, I want to scan the receipt with the camera,
+        so that I can record the expense without typing the amount manually.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Context / proposal
+      description: Technical or UX detail (optional)
+      placeholder: "Use the `camera` package, new `POST /api/expenses/receipt` endpoint, etc."
+    validations:
+      required: false
+  - type: textarea
+    id: aceptacion
+    attributes:
+      label: Acceptance criteria
+      description: Checklist of what must be met to close the feature
+      placeholder: |
+        - [ ] A photo can be taken from the Add screen
+        - [ ] The photo is uploaded to POST /api/expenses/receipt
+        - [ ] The image is shown in the expense details
+      render: markdown
+    validations:
+      required: true
+  - type: input
+    id: ref
+    attributes:
+      label: Related issue
+      placeholder: "Issue URL or number (if any)"
+    validations:
+      required: false
+  - type: checkboxes
+    id: terminar
+    attributes:
+      label: Checklist
+      options:
+        - label: "I checked that there is no equivalent issue"
+        - label: "This feature is testable (acceptance criteria)"

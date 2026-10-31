@@ -1,0 +1,47 @@
+# Repository labels — synced by .github/workflows/labels.yml
+# Layer
+- name: layer:backend
+  description: "Changes in backend/ (Go, chi, pgx)"
+  color: "1f6feb"
+- name: layer:mobile
+  description: "Changes in mobile/ (Flutter)"
+  color: "0f52ba"
+- name: layer:mcp
+  description: "Changes in mcp-server/ (Python)"
+  color: "bf3989"
+- name: layer:docs
+  description: "Changes in documentation and scripts"
+  color: "7057ff"
+
+# Priority
+- name: priority:high
+  description: "Blocking or top priority"
+  color: "d93f0b"
+- name: priority:medium
+  description: "Second level"
+  color: "fbca04"
+- name: priority:low
+  description: "Can wait"
+  color: "0e8a16"
+
+# Type
+- name: type:feature
+  description: "New feature"
+  color: "1d76db"
+- name: type:bug
+  description: "Bug fix"
+  color: "d73a4a"
+- name: type:chore
+  description: "Technical task / refactor / maintenance"
+  color: "6f42c1"
+- name: type:test
+  description: "Tests and CI infrastructure"
+  color: "56de8a"
+
+# Process
+- name: help wanted
+  description: "Open to contributions"
+  color: "008672"
+- name: good first issue
+  description: "Good first task to get started"
+  color: "7057ff"

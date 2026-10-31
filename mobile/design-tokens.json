@@ -1,0 +1,114 @@
+{
+  "name": "Finance App Design Tokens",
+  "version": "1.0.0",
+  "system": "Material Design 3",
+  "color_palette": {
+    "primary": {
+      "hex": "#0F52BA",
+      "description": "Azul zafiro para acciones principales, FAB y navegación activa."
+    },
+    "income": {
+      "hex": "#00A86B",
+      "description": "Verde esmeralda para ingresos y balances positivos."
+    },
+    "expense": {
+      "hex": "#E53935",
+      "description": "Rojo para gastos y alertas."
+    },
+    "background": {
+      "hex": "#F8F9FA",
+      "description": "Fondo ultra claro para toda la app."
+    },
+    "card_surface": {
+      "hex": "#FFFFFF",
+      "description": "Fondo blanco para tarjetas e inputs."
+    },
+    "text_primary": {
+      "hex": "#1A1C1E",
+      "description": "Color principal para títulos y montos."
+    },
+    "text_secondary": {
+      "hex": "#73777F",
+      "description": "Color para fechas, subtítulos y descripciones."
+    }
+  },
+  "typography": {
+    "font_family": "System Default / Roboto",
+    "scale": {
+      "amount_display": {
+        "size_sp": 32,
+        "weight": "Bold",
+        "use": "Balance total y montos destacados"
+      },
+      "section_heading": {
+        "size_sp": 20,
+        "weight": "SemiBold",
+        "use": "Títulos de pantalla y headers"
+      },
+      "item_title": {
+        "size_sp": 16,
+        "weight": "Medium",
+        "use": "Nombre de categoría o concepto de gasto"
+      },
+      "body": {
+        "size_sp": 14,
+        "weight": "Regular",
+        "use": "Fechas, descripciones y textos secundarios"
+      },
+      "caption": {
+        "size_sp": 12,
+        "weight": "Regular",
+        "use": "Porcentajes en gráficos y notas al pie"
+      }
+    }
+  },
+  "spacing_scale_px": [4, 8, 12, 16, 24, 32, 48],
+  "border_radius_px": {
+    "small": 8,
+    "medium": 16,
+    "large": 28,
+    "pill": 100
+  },
+  "component_rules": {
+    "cards": {
+      "border_radius_px": 16,
+      "elevation": 1,
+      "padding_px": 16,
+      "rule": "Usar Card nativo de Flutter con `card_surface` como fondo."
+    },
+    "bottom_sheet": {
+      "border_radius_top_px": 28,
+      "padding_px": 24,
+      "rule": "Usar para la pantalla/formulario de 'Agregar Gasto'."
+    },
+    "buttons": {
+      "height_px": 48,
+      "border_radius_px": 100,
+      "rule": "Usar `FilledButton` para la acción principal y `OutlinedButton` para secundarias."
+    },
+    "list_items": {
+      "height_px": 72,
+      "padding_horizontal_px": 16,
+      "rule": "Usar `ListTile` con icono dentro de un `CircleAvatar` a la izquierda."
+    }
+  },
+  "assets_and_icons": {
+    "icon_library": "flutter_lucide",
+    "illustrations_source": "unDraw (SVG format)",
+    "rules": {
+      "category_icons": {
+        "style": "Wrapped inside a CircleAvatar with 12% opacity background of the category color",
+        "size_dp": 24
+      },
+      "empty_states": {
+        "use_svg": true,
+        "max_height_dp": 180,
+        "rule": "Always display an SVG illustration from assets/illustrations/ when a list or chart has no data."
+      },
+      "action_icons": {
+        "size_dp": 20,
+        "color": "text_primary or primary depending on context"
+      }
+    }
+  }
+}

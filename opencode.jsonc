@@ -1,0 +1,69 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "deepseek/deepseek-v4-pro",
+
+  // Optimización de contexto + continuidad de sesión (sandbox de tool output).
+  // No agregar `mcp.context-mode`: el loader de OpenCode ignoraría los ctx_*.
+  "plugin": ["context-mode"],
+
+  "instructions": ["docs/SETUP.md"],
+
+  "mcp": {
+    "codebase-memory-mcp": {
+      "type": "local",
+      "command": ["codebase-memory-mcp"],
+      "enabled": true
+    },
+    // Documentación actualizada de librerías (chi, pgx, Flutter, FastMCP).
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    },
+    // Schema y consultas de solo-lectura sobre PostgreSQL.
+    // Las credenciales se cargan desde .env (gitignored) vía el wrapper.
+    "postgres": {
+      "type": "local",
+      "command": [
+        "./scripts/opencode-postgres-mcp.sh"
+      ],
+      "enabled": true,
+      "timeout": 30000
+    }
+  },
+
+  // Modelos primarios/backup (nota: opencode no soporta fallback nativo de modelo).
+  // Si el primario falla o da error, cambia `model` manualmente al backup:
+  //   plan  -> backup: opencode-go/mimo-v2.5
+  //   build -> backup: opencode-go/qwen3.8-flash
+  "agent": {
+    "plan": {
+      "mode": "primary",
+      "model": "opencode-go/qwen3.7-plus",
+      "permission": { "edit": "deny", "bash": "deny" }
+    },
+    "build": {
+      "mode": "primary",
+      "model": "opencode-go/kimi-k2.7-code"
+    },
+    "go-backend": {
+      "description": "Especialista en Go, PostgreSQL, MinIO y Docker. Usar para cambios en backend/",
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash",
+      "temperature": 0.1,
+      "prompt": "{file:./.opencode/prompts/go-backend.md}"
+    },
+    "flutter-mobile": {
+      "description": "Especialista en Flutter, Dart y Firebase. Usar para cambios en mobile/",
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash",
+      "prompt": "{file:./.opencode/prompts/flutter-mobile.md}"
+    },
+    "python-mcp": {
+      "description": "Especialista en Python, FastMCP, matplotlib y PostgreSQL. Usar para cambios en mcp-server/",
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash",
+      "prompt": "{file:./.opencode/prompts/python-mcp.md}"
+    }
+  }
+}

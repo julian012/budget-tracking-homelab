@@ -1,0 +1,78 @@
+#!/bin/bash
+set -e
+
+CHANGED=$(git diff --cached --name-only)
+export PATH=/opt/flutter/bin:$HOME/go/bin:$HOME/go-workspace/bin:$HOME/.local/bin:$PATH
+export GOPATH=$HOME/go-workspace
+export GOROOT=$HOME/go
+export TEST_DATABASE_URL="${TEST_DATABASE_URL:-postgres://budget:change-me@localhost:5432/budget_test}"
+
+run_tests() {
+  local layer=$1
+  local cmd=$2
+  local dir=$3
+  if echo "$CHANGED" | grep -q "^${layer}/"; then
+    echo "→ Running ${layer} tests..."
+    (cd "$dir" && eval "$cmd") || {
+      echo "❌ ${layer} tests failed"
+      exit 1
+    }
+  fi
+}
+
+run_check() {
+  local layer=$1
+  local name=$2
+  local cmd=$3
+  local dir=$4
+  if echo "$CHANGED" | grep -q "^${layer}/"; then
+    echo "→ ${layer}: ${name}..."
+    (cd "$dir" && eval "$cmd") || {
+      echo "❌ ${layer}: ${name} failed"
+      exit 1
+    }
+  fi
+}
+
+# ─── Verificación de dependencias, linters e imports ───────────────
+
+# Backend (Go)
+run_check "backend" "go vet" "go vet ./..." "backend"
+run_check "backend" "gofmt" "test -z \"\$(gofmt -l .)\" || { echo 'Archivos sin gofmt:'; gofmt -l .; exit 1; }" "backend"
+run_check "backend" "dependencias (go mod tidy)" "go mod tidy && git diff --exit-code go.mod go.sum" "backend"
+if echo "$CHANGED" | grep -q "^backend/"; then
+  if command -v govulncheck >/dev/null 2>&1; then
+    echo "→ backend: govulncheck (vulnerabilidades)..."
+    (cd backend && govulncheck ./...) || {
+      echo "❌ backend: govulncheck encontró vulnerabilidades (actualiza las dependencias antes de commitear)"
+      exit 1
+    }
+  else
+    echo "⚠️  govulncheck no instalado — se omite el chequeo de vulnerabilidades."
+    echo "    Instala con: go install golang.org/x/vuln/cmd/govulncheck@latest"
+  fi
+fi
+
+# Mobile (Flutter)
+run_check "mobile" "flutter analyze" "flutter analyze" "mobile"
+run_check "mobile" "dependencias (flutter pub get)" "flutter pub get && git diff --exit-code pubspec.lock" "mobile"
+if echo "$CHANGED" | grep -q "^mobile/"; then
+  if command -v osv-scanner >/dev/null 2>&1; then
+    echo "→ mobile: osv-scanner (vulnerabilidades)..."
+    (cd mobile && osv-scanner scan -r pubspec.lock) || {
+      echo "❌ mobile: osv-scanner encontró vulnerabilidades (actualiza las dependencias antes de commitear)"
+      exit 1
+    }
+  else
+    echo "⚠️  osv-scanner no instalado — se omite el chequeo de vulnerabilidades de Flutter."
+    echo "    Instala con: make setup (o descarga el binario de https://github.com/google/osv-scanner/releases)"
+  fi
+fi
+
+# ─── Tests ─────────────────────────────────────────────────────────
+
+run_tests "backend" "go test -p 1 ./..." "backend"
+run_tests "mcp-server" "python3 -m pytest . -v" "mcp-server"
+run_tests "mobile" "flutter test" "mobile"
+
+echo "✓ All checks and tests passed"

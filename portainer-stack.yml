@@ -1,0 +1,40 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/youruser/budget-tracking-homelab-backend:latest}
+    pull_policy: always
+    container_name: budget-backend
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - FIREBASE_CREDENTIALS_PATH=/app/firebase-service-account.json
+      - FIREBASE_WEB_API_KEY=${FIREBASE_WEB_API_KEY}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_API_ENDPOINT=${AI_API_ENDPOINT:-https://opencode.ai/zen/go/v1}
+    volumes:
+      - /opt/budget-tracking/backend/firebase-service-account.json:/app/firebase-service-account.json:ro
+    networks:
+      - apps-network
+    restart: unless-stopped
+
+  mcp:
+    image: ${MCP_IMAGE:-ghcr.io/youruser/budget-tracking-homelab-mcp:latest}
+    pull_policy: always
+    container_name: budget-mcp
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgres://budget:change-me@postgres_container:5432/budget}
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8000
+    networks:
+      - apps-network
+    restart: unless-stopped
+
+networks:
+  apps-network:
+    external: true
+    name: apps-network

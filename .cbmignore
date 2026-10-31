@@ -1,0 +1,13 @@
+# Artefactos de build y archivos generados que contaminan el grafo de código
+# (codebase-memory-mcp). Sintaxis estilo .gitignore.
+dist/
+build/
+.dart_tool/
+.flutter-plugins*
+mobile/android/app/.cxx/
+mobile/android/.gradle/
+mobile/android/gradle/
+mcp-server/__pycache__/
+mcp-server/.pytest_cache__/
+*.pyc
+backend/server

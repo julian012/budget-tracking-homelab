@@ -1,0 +1,131 @@
+# CI — AI Budget Tracking
+# Runs the tests for each layer (backend + mobile) on every PR and push to main.
+# Each job only runs when files in its layer changed (to avoid wasting minutes).
+# Note: mobile tests use firebase_auth_mocks (no network or real Firebase needed).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'Makefile'
+            mobile:
+              - 'mobile/**'
+              - 'Makefile'
+            docs:
+              - 'docs/**'
+              - 'AGENTS.md'
+              - 'README.md'
+
+  # ────────────────────────────────────────────────
+  #  Backend (Go) — requires PostgreSQL for the tests
+  # ────────────────────────────────────────────────
+  backend:
+    needs: check-changes
+    if: needs.check-changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: budget
+          POSTGRES_PASSWORD: budget
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U budget"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.9"
+          cache-dependency-path: backend/go.sum
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Create test DB and apply migrations
+        run: |
+          PGPASSWORD=budget psql -h localhost -U budget -d postgres -c "CREATE DATABASE budget_test;"
+          for f in backend/migrations/*.up.sql; do
+            echo "Applying $(basename $f)"
+            PGPASSWORD=budget psql -h localhost -U budget -d budget_test -q -f "$f"
+          done
+        working-directory: .
+      - name: Start MinIO for storage tests
+        # The MinIO server requires the "server /data" argument and Actions
+        # service containers do not support cmd/args → manual container with an
+        # active wait on the health endpoint.
+        # Image: minio/minio is no longer pullable (Docker Hub removed it on
+        # 2026-09-12 and quay.io requires auth since ~2026-09-24) → use the
+        # Chainguard MinIO build, pinned by digest so a moving tag does not
+        # break CI again (#118).
+        run: |
+          docker run -d --name minio-test -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            cgr.dev/chainguard/minio:latest@sha256:2136d593beacf4461187035eca949fe49abd589d5079735025c711ca58fee0c8 server /data
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:9000/minio/health/live && exit 0
+            sleep 1
+          done
+          echo "MinIO did not start in time"; docker logs minio-test; exit 1
+        working-directory: .
+      - name: Run tests
+        env:
+          TEST_DATABASE_URL: postgres://budget:budget@localhost:5432/budget_test
+          MINIO_TEST_ENDPOINT: localhost:9000
+          MINIO_TEST_ACCESS_KEY: minioadmin
+          MINIO_TEST_SECRET_KEY: minioadmin
+        run: go test -p 1 ./...
+
+  # ────────────────────────────────────────────────
+  # Mobile (Flutter)
+  # ────────────────────────────────────────────────
+  mobile:
+    needs: check-changes
+    if: needs.check-changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Run tests
+        run: flutter test

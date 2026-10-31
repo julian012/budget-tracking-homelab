@@ -1,0 +1,65 @@
+# Dependencies
+backend/vendor/
+node_modules/
+mobile/node_modules/
+
+# Build artifacts
+backend/tmp/
+backend/bin/
+mobile/.expo/
+mobile/dist/
+dist/
+mobile/build/
+
+# Flutter
+mobile/.dart_tool/
+mobile/.packages
+mobile/.pub/
+*.flutter-plugins
+*.flutter-plugins-dependencies
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+backend/firebase-service-account.json
+mobile/google-services.json
+mobile/android/app/google-services.json
+mobile/GoogleService-Info.plist
+mobile/ios/Runner/GoogleService-Info.plist
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenCode
+.opencode/state/
+
+# Flutter / Android / iOS artifacts
+mobile/android/local.properties
+mobile/android/.gradle/
+mobile/android/app/.cxx/
+mobile/android/app/debug.keystore
+mobile/ios/Flutter/ephemeral/
+mobile/macos/Flutter/ephemeral/
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+*.xcuserstate
+
+# Docker
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+mcp-server/.venv/
+
+# Test coverage
+*.out
+coverage/

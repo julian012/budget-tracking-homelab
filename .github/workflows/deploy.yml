@@ -1,0 +1,154 @@
+name: Deploy backend + APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'mobile/**'
+      - 'portainer-stack.yml'
+      - 'Makefile'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'mcp-server/**'
+              - 'portainer-stack.yml'
+              - 'Makefile'
+            mobile:
+              - 'mobile/**'
+              - 'Makefile'
+
+  deploy-backend:
+    needs: check-changes
+    # Requires the DEPLOY_ENABLED=true variable (Settings → Variables).
+    if: (github.event_name == 'workflow_dispatch' || needs.check-changes.outputs.backend == 'true') && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
+            ghcr.io/${{ github.repository }}-backend:latest
+      - name: Build and push MCP server image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./mcp-server
+          file: ./mcp-server/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}-mcp:${{ github.sha }}
+            ghcr.io/${{ github.repository }}-mcp:latest
+      - name: Trigger Portainer webhook
+        run: curl -sSf -X POST "$PORTAINER_WEBHOOK"
+        env:
+          PORTAINER_WEBHOOK: ${{ secrets.PORTAINER_WEBHOOK }}
+
+  build-apk:
+    needs: check-changes
+    # Requires the APK_BUILD_ENABLED=true variable (Settings → Variables).
+    if: (github.event_name == 'workflow_dispatch' || needs.check-changes.outputs.mobile == 'true') && vars.APK_BUILD_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        # Flutter release+debug builds (all ABIs) exhaust the runner disk and
+        # native library stripping fails with "No space left on device". Unused
+        # toolchains/services are removed WITHOUT touching the Android SDK/NDK
+        # (stripDebugDebugSymbols needs it).
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/chromium \
+            /usr/lib/R /usr/share/swift \
+            "$ANDROID_HOME/system-images" "$ANDROID_HOME/emulator" || true
+          sudo docker image prune -af || true
+          sudo apt-get clean
+          df -h /
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+      - name: Write google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
+      - name: Write debug keystore
+        env:
+          ANDROID_DEBUG_KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: echo "$ANDROID_DEBUG_KEYSTORE_B64" | base64 -d > android/app/debug.keystore
+      - name: Verify keystore SHA-1
+        run: keytool -list -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey | grep -iE "SHA1|SHA256"
+      - name: Get version
+        id: version
+        run: |
+          VER=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ' | cut -d+ -f1)
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
+      - name: Build release
+        run: flutter build apk --release --build-name=${{ steps.version.outputs.ver }} --build-number=${{ github.run_number }}
+      - name: Upload release APK as artifact
+        continue-on-error: true   # backup: must not block distribution (artifact quota, #97)
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 7
+          name: budget-tracker-v${{ steps.version.outputs.ver }}-r${{ github.run_number }}-release
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+      - name: Build debug
+        run: flutter build apk --debug --build-name=${{ steps.version.outputs.ver }} --build-number=${{ github.run_number }}
+      - name: Upload debug APK to Firebase App Distribution
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          npx firebase-tools appdistribution:distribute \
+            build/app/outputs/flutter-apk/app-debug.apk \
+            --app ${{ vars.FIREBASE_APP_ID }} \
+            --groups testers \
+            --release-notes "v${{ steps.version.outputs.ver }} debug · ${{ github.sha }}"
+      - name: Upload debug APK as artifact (backup)
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 7
+          name: budget-tracker-v${{ steps.version.outputs.ver }}-r${{ github.run_number }}-debug
+          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
